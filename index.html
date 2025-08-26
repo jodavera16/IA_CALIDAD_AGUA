@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Análisis IA - Robot Marino</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <script src="https://kit.fontawesome.com/a2e0e6f6b6.js" crossorigin="anonymous"></script>
+  <!-- Markdown render -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- Flatpickr (datetime picker) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --overlay-color: rgba(0, 30, 60, 0.35);
+      --primary: #1e90ff;
+      --primary-dark: #1a78d2;
+      --card-bg: #ffffff;
+      --text-dark: #333333;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      background-image:
+        linear-gradient(var(--overlay-color), var(--overlay-color)),
+        url('./assets/Fondo.jpg');
+      background-position: center center;
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      color: #ffffff;
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; padding: 20px;
+    }
+    h1 { margin-bottom: 20px; font-size: 2rem; text-align: center; color: var(--primary); text-shadow: 1px 1px 2px rgba(0,0,0,0.2); z-index: 1; }
+    .container { width: 100%; max-width: 1100px; margin: 0 auto; display: grid; gap: 20px; position: relative; z-index: 1; }
+    .card { background: rgba(255,255,255,0.9); color: var(--text-dark); border-radius: 8px; padding: 20px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .card h2 { margin-bottom: 10px; color: var(--primary); }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; font-size: 1rem; font-weight: 500;
+      color: #fff; background: var(--primary); border: none; border-radius: 6px; cursor: pointer; transition: background 0.3s; text-decoration: none;
+    }
+    .btn:hover { background: var(--primary-dark); }
+    .actions { display: flex; gap: 15px; flex-wrap: wrap; justify-content: flex-start; align-items: end; }
+    .filters {
+      display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 12px; width: 100%; margin-top: 12px;
+    }
+    .filters .row { display: contents; }
+    .filters label { font-size: 0.9rem; color: #555; }
+    .filters input, .filters select {
+      width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; background: #fff; color: #333;
+    }
+
+    /* Área de gráficas */
+    #charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    .chart-card {
+      background: #fff; border: 1px solid #eaeaea; border-radius: 10px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .chart-title { font-weight: 600; margin-bottom: 8px; color: #1e3350; }
+    .line-wrap { height: 220px; }
+    .muted { color: #777; font-size: 0.9rem; }
+
+    #resultadoIA {
+      background: rgba(255,255,255,0.9); padding: 20px; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+      min-height: auto; max-height: none; overflow: visible; white-space: pre-wrap; overflow-wrap: break-word; line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <h1><i class="fas fa-anchor"></i> Análisis Inteligente de Datos</h1>
+
+  <div class="container">
+    <div class="card">
+      <h2>1️⃣ Datos de TagoIO</h2>
+
+      <div class="actions">
+        <button class="btn" onclick="obtenerDatosTago()">
+          <i class="fas fa-download"></i> Obtener últimos (qty)
+        </button>
+        <button class="btn" onclick="obtenerDatosTagoPorRango()">
+          <i class="fas fa-filter"></i> Obtener por rango
+        </button>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filters">
+        <div class="row">
+          <div>
+            <label for="startDate">Desde (fecha/hora)</label>
+            <input id="startDate" type="text" placeholder="dd/mm/aaaa hh:mm AM/PM" />
+          </div>
+          <div>
+            <label for="endDate">Hasta (fecha/hora)</label>
+            <input id="endDate" type="text" placeholder="dd/mm/aaaa hh:mm AM/PM" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="variable">Variable (opcional)</label>
+            <input id="variable" type="text" placeholder="pH, turbidez, temperatura, etc." />
+          </div>
+          <div>
+            <label for="qty">Qty (máx. registros)</label>
+            <input id="qty" type="number" min="1" max="10000" value="100" />
+          </div>
+        </div>
+      </div>
+
+      <p class="muted" id="statusMsg">[Aún no hay datos. Usa los botones para cargar.]</p>
+      <div id="charts"></div>
+    </div>
+
+    <div class="card">
+      <h2>2️⃣ Resultados de IA</h2>
+      <div class="actions">
+        <button class="btn" onclick="analizarConIA()"><i class="fas fa-robot"></i> Analizar con IA</button>
+      </div>
+      <div id="resultadoIA">[Esperando análisis de IA...]</div>
+    </div>
+  </div>
+
+  <script>
+    // ⚠️ Mantén tu token seguro (idealmente en backend/proxy).
+    const TAGO_DEVICE_TOKEN = "83230816-804a-474c-8110-2c900d4a0675";
+
+    let datos = [];
+    let fpStart, fpEnd;
+    let chartInstances = []; // para destruir gráficas previas
+
+    // Rango y unidades por variable
+    const VAR_META = {
+      temperatura: { min: 0, max: 50, unit: "°C", label: "Temperatura" },
+      ph:          { min: 0, max: 14, unit: "pH", label: "pH" },
+      oxigeno:     { min: 0, max: 10, unit: "mg/L", label: "Oxígeno disuelto" },
+      turbidez:    { min: 0, max: 3000, unit: "NTU", label: "Turbidez" }
+    };
+
+    // === Flatpickr ===
+    document.addEventListener("DOMContentLoaded", () => {
+      const baseOpts = {
+        locale: flatpickr.l10ns.es,
+        enableTime: true,
+        time_24hr: false,
+        dateFormat: "d/m/Y h:i K",
+        minuteIncrement: 1
+      };
+      fpStart = flatpickr("#startDate", baseOpts);
+      fpEnd   = flatpickr("#endDate", baseOpts);
+    });
+
+    // === Helpers ===
+    function buildTagoURL({ qty, variable, startISO, endISO }) {
+      const params = new URLSearchParams();
+      if (qty) params.set("qty", String(qty));
+      if (variable) params.set("variable", variable);
+      if (startISO) params.set("start_date", startISO);
+      if (endISO) params.set("end_date", endISO);
+      return `https://api.tago.io/data?${params.toString()}`;
+    }
+
+    async function obtenerDatosTago() {
+      try {
+        setStatus("Cargando últimos datos…");
+        const qty = parseInt(document.getElementById("qty").value || "10", 10);
+        const variable = (document.getElementById("variable").value || "").trim();
+
+        const url = buildTagoURL({ qty, variable });
+        const response = await fetch(url, { headers: { "Device-Token": TAGO_DEVICE_TOKEN } });
+        const data = await response.json();
+        datos = data.result || [];
+        renderCharts(datos);
+        setStatus("Listo ✅");
+      } catch (err) {
+        console.error(err);
+        setStatus("⚠️ Error al obtener datos.");
+      }
+    }
+
+    async function obtenerDatosTagoPorRango() {
+      try {
+        setStatus("Cargando datos del rango…");
+        const startDateObj = fpStart?.selectedDates?.[0] || null;
+        const endDateObj   = fpEnd?.selectedDates?.[0] || null;
+        const qty          = parseInt(document.getElementById("qty").value || "500", 10);
+        const variable     = (document.getElementById("variable").value || "").trim();
+
+        if (!startDateObj || !endDateObj) { alert("Debes seleccionar fecha/hora válida en ambos campos."); return; }
+        if (startDateObj >= endDateObj)   { alert("La fecha/hora inicial debe ser menor que la final."); return; }
+
+        const url = buildTagoURL({
+          qty, variable,
+          startISO: startDateObj.toISOString(),
+          endISO:   endDateObj.toISOString()
+        });
+
+        const response = await fetch(url, { headers: { "Device-Token": TAGO_DEVICE_TOKEN } });
+        const data = await response.json();
+        let resultado = (data.result || []).filter(item => {
+          const t = new Date(item.time);
+          return t >= startDateObj && t <= endDateObj;
+        });
+
+        datos = resultado;
+        renderCharts(datos);
+        setStatus("Listo ✅");
+      } catch (err) {
+        console.error(err);
+        setStatus("⚠️ Error al obtener datos por rango.");
+      }
+    }
+
+    function setStatus(msg) {
+      document.getElementById("statusMsg").textContent = msg;
+    }
+
+    // ====== Render de gráficas (solo histórico + título con promedio) ======
+    function renderCharts(rows) {
+      // Limpia
+      chartInstances.forEach(ch => ch.destroy());
+      chartInstances = [];
+      const chartsRoot = document.getElementById("charts");
+      chartsRoot.innerHTML = "";
+
+      if (!rows.length) {
+        chartsRoot.innerHTML = `<p class="muted">No hay datos para mostrar con los filtros actuales.</p>`;
+        return;
+      }
+
+      // Agrupar por variable
+      const byVar = {};
+      for (const r of rows) {
+        const vname = (r.variable || "").toLowerCase();
+        if (!byVar[vname]) byVar[vname] = [];
+        const val = typeof r.value === "number" ? r.value : parseFloat(r.value);
+        if (!isFinite(val)) continue;
+        byVar[vname].push({ t: new Date(r.time), v: val, unit: r.unit || "" });
+      }
+      Object.values(byVar).forEach(arr => arr.sort((a,b)=>a.t-b.t));
+
+      // Tarjetas por variable (SIN gauge)
+      Object.entries(byVar).forEach(([vname, series]) => {
+        const meta = VAR_META[vname] || { min: 0, max: 100, unit: series[0]?.unit || "", label: vname };
+        const avg = series.reduce((s,x)=>s+x.v,0) / series.length;
+        const labels = series.map(x => x.t.toLocaleString());
+        const data   = series.map(x => x.v);
+
+        const card = document.createElement("div");
+        card.className = "chart-card";
+        card.innerHTML = `
+          <div class="chart-title">${meta.label} — Promedio: ${avg.toFixed(2)} ${meta.unit}</div>
+          <div class="line-wrap"><canvas></canvas></div>
+        `;
+        chartsRoot.appendChild(card);
+
+        // Línea histórica
+        const lineCtx = card.querySelector(".line-wrap canvas").getContext("2d");
+        const line = new Chart(lineCtx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: `${meta.label} (${meta.unit})`,
+              data,
+              fill: false,
+              tension: 0.25,
+              pointRadius: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: true },
+              tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+              x: { ticks: { maxRotation: 0, autoSkip: true } },
+              y: { min: meta.min, max: meta.max }
+            }
+          }
+        });
+        chartInstances.push(line);
+      });
+    }
+
+    // ====== IA ======
+    async function analizarConIA() {
+      if (!datos.length) { alert("Primero obtén los datos de TagoIO."); return; }
+      try {
+        const res = await fetch("http://127.0.0.1:8000/analizar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: JSON.stringify(datos) })
+        });
+        const result = await res.json();
+        document.getElementById("resultadoIA").innerHTML = marked.parse(result.resultado || "⚠️ Error de IA.");
+      } catch (err) {
+        console.error(err);
+        document.getElementById("resultadoIA").textContent = "⚠️ Error de conexión con el backend.";
+      }
+    }
+  </script>
+</body>
+</html>
